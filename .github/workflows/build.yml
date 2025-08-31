@@ -14,10 +14,10 @@ jobs:
 
     env:
       kernelName: "DogDay-KernelSU"
-      kernelRepo: "https://codeberg.org/DogDayAndroid/android_kernel_xiaomi_thyme"
-      kernelBranch: "lineage-20.0"
-      kernelDevice: "thyme"
-      DEFCONFIG_NAME: "thyme_defconfig"
+      kernelRepo: "https://github.com/PixelExperience-Devices/kernel_xiaomi_oxygen"
+      kernelBranch: "thirteen"
+      kernelDevice: "oxygen"
+      DEFCONFIG_NAME: "oxygen_defconfig"
       ARCH: "arm64"
       CROSS_COMPILE: "aarch64-linux-gnu-"
       CROSS_COMPILE_ARM32: "arm-linux-gnueabi-"
