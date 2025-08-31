@@ -36,7 +36,7 @@ jobs:
           sudo apt-get update -y
           sudo apt-get install -y \
             bc bison build-essential ccache curl flex git libssl-dev \
-            libelf-dev libncurses5-dev lz4 lz4-dev python3 wget unzip \
+            libelf-dev libncurses5-dev lz4 liblz4-dev python3 wget unzip \
             device-tree-compiler zstd libfl-dev
 
       - name: "🌟 Clone kernel source"
@@ -119,4 +119,60 @@ jobs:
           name: dtbo-KernelSU-${{ env.kernelDevice }}
           path: ${{ env.OUT_DIR }}/arch/${{ env.ARCH }}/boot/dtbo.img
           if-no-files-found: ignore
+          retention-days: 7
+
+      # --------------------------------------------------
+      # ① 下载 Android mkbootimg 工具
+      - name: "📦 Fetch mkbootimg"
+        run: |
+          git clone --depth=1 https://github.com/osm0sis/mkbootimg tools
+          echo "$(pwd)/tools" >> $GITHUB_PATH
+
+      # ② 把 Image 与 dtb 打包成 boot.img
+      - name: "🔗 Make boot.img"
+        working-directory: ${{ env.kernelName }}
+        run: |
+          # 如果 dtb 是目录，先打包成 dtb.img（很多设备需要）
+          if [ -d ${{ env.OUT_DIR }}/arch/${{ env.ARCH }}/boot/dtb ]; then
+            find ${{ env.OUT_DIR }}/arch/${{ env.ARCH }}/boot/dtb -type f -name "*.dtb" \
+              | sort | xargs cat > ${{ env.OUT_DIR }}/dtb.img
+            DTB_ARG="--dtb ${{ env.OUT_DIR }}/dtb.img"
+          else
+            DTB_ARG=""
+          fi
+
+          # 生成 boot.img（基址、页大小等按你设备实际修改）
+      - name: "🔗 Make boot.img"
+        working-directory: ${{ env.kernelName }}
+        run: |
+          # 如果 dtb 是目录，先合成 dtb.img
+          if [ -d ${{ env.OUT_DIR }}/arch/${{ env.ARCH }}/boot/dtb ]; then
+            find ${{ env.OUT_DIR }}/arch/${{ env.ARCH }}/boot/dtb -type f -name "*.dtb" \
+              | sort | xargs cat > ${{ env.OUT_DIR }}/dtb.img
+            DTB_FILE="${{ env.OUT_DIR }}/dtb.img"
+          else
+            DTB_FILE="${{ env.OUT_DIR }}/arch/${{ env.ARCH }}/boot/dtb"
+          fi
+
+          # 使用原厂参数
+          mkbootimg \
+            --kernel ${{ env.OUT_DIR }}/arch/${{ env.ARCH }}/boot/Image \
+            --dtb  "$DTB_FILE" \
+            --cmdline "androidboot.hardware=qcom msm_rtb.filter=0x237 ehci-hcd.park=3 lpm_levels.sleep_disabled=1 androidboot.bootdevice=7824900.sdhci earlycon=msm_hsl_uart,0x78af000 loop.max_part=16 androidboot.usbconfigfs=true androidboot.boot_devices=soc/7824900.sdhci buildvariant=userdebug" \
+            --base        0x80000000 \
+            --kernel_offset  0x00008000 \
+            --ramdisk_offset 0x01000000 \
+            --tags_offset    0x00000100 \
+            --pagesize    2048 \
+            --os_version  13.0.0 \
+            --os_patch_level 2024-05 \
+            -o ${{ env.OUT_DIR }}/boot.img
+
+      # ③ 把 boot.img 当 artifact 上传
+      - name: "🚀 Upload boot.img"
+        uses: actions/upload-artifact@v4
+        with:
+          name: boot-KernelSU-${{ env.kernelDevice }}
+          path: ${{ env.kernelName }}/${{ env.OUT_DIR }}/boot.img
+          if-no-files-found: error
           retention-days: 7
