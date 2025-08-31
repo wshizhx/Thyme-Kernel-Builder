@@ -45,7 +45,7 @@ jobs:
 
       - name: "🛠️ Setup AOSP clang"
         run: |
-          git clone --depth=1 https://github.com/Neutron-Toolchains/clang-aosp prebuilts/clang/host/linux-x86/clang-aosp
+          git clone --depth=1 https://github.com/kdrag0n/aarch64-linux-android-13-clang prebuilts/clang/host/linux-x86/clang-aosp
           echo "$(pwd)/prebuilts/clang/host/linux-x86/clang-aosp/bin" >> $GITHUB_PATH
 
       - name: "😋 Patch KernelSU"
@@ -129,19 +129,6 @@ jobs:
           echo "$(pwd)/tools" >> $GITHUB_PATH
 
       # ② 把 Image 与 dtb 打包成 boot.img
-      - name: "🔗 Make boot.img"
-        working-directory: ${{ env.kernelName }}
-        run: |
-          # 如果 dtb 是目录，先打包成 dtb.img（很多设备需要）
-          if [ -d ${{ env.OUT_DIR }}/arch/${{ env.ARCH }}/boot/dtb ]; then
-            find ${{ env.OUT_DIR }}/arch/${{ env.ARCH }}/boot/dtb -type f -name "*.dtb" \
-              | sort | xargs cat > ${{ env.OUT_DIR }}/dtb.img
-            DTB_ARG="--dtb ${{ env.OUT_DIR }}/dtb.img"
-          else
-            DTB_ARG=""
-          fi
-
-          # 生成 boot.img（基址、页大小等按你设备实际修改）
       - name: "🔗 Make boot.img"
         working-directory: ${{ env.kernelName }}
         run: |
