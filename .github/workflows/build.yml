@@ -123,10 +123,10 @@ jobs:
 
       # --------------------------------------------------
       # ① 下载 Android mkbootimg 工具
-      - name: "📦 Fetch mkbootimg"
+      - name: "📦 Install mkbootimg"
         run: |
-          git clone --depth=1 https://github.com/osm0sis/mkbootimg tools
-          echo "$(pwd)/tools" >> $GITHUB_PATH
+          sudo apt-get update
+          sudo apt-get install -y android-tools-mkbootimg
 
       # ② 把 Image 与 dtb 打包成 boot.img
       - name: "🔗 Make boot.img"
