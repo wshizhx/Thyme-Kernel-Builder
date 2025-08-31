@@ -1,12 +1,12 @@
-[  
-    {
+[
+  {
     "kernelSource": {
-      "name": "miku-KernelSU",
-      "repo": "https://github.com/PhamtomK12/kernel_xiaomi_odin",
-      "branch": "TDA",
-      "device": "odin"
+      "name": "DogDayAndroid",
+      "repo": "https://github.com/PixelExperience-Devices/kernel_xiaomi_oxygen",
+      "branch": "thirteen",
+      "device": "oxygen"
     },
-    "withKernelSU": true,
+    "withKernelSU": false,
     "toolchains": [
       {
         "repo": "https://android.googlesource.com/platform/prebuilts/gas/linux-x86",
@@ -27,12 +27,14 @@
       "CLANG_TRIPLE": "aarch64-linux-gnu-",
       "AR": "",
       "CC": "clang"
-    },    
+    }
+  },
+  {
     "kernelSource": {
       "name": "DogDay-KernelSU",
-      "repo": "https://codeberg.org/DogDayAndroid/android_kernel_xiaomi_thyme",
-      "branch": "lineage-20.0",
-      "device": "thyme"
+      "repo": "https://github.com/PixelExperience-Devices/kernel_xiaomi_oxygen",
+      "branch": "thirteen",
+      "device": "oxygen"
     },
     "withKernelSU": true,
     "toolchains": [
@@ -55,6 +57,6 @@
       "CLANG_TRIPLE": "aarch64-linux-gnu-",
       "AR": "",
       "CC": "clang"
-    }    
+    }
   }
 ]
