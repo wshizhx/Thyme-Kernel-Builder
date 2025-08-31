@@ -1,4 +1,4 @@
-name: "Build KernelSU for thyme"
+name: "Build KernelSU for oxygen"
 
 env:
   CONFIGURATION: "repos.json"
@@ -9,7 +9,7 @@ on:
 
 jobs:
   Build-KernelSU:
-    name: "🐎 DogDay-KernelSU (thyme)"
+    name: "🐎 DogDay-KernelSU (oxygen)"
     runs-on: ubuntu-latest
 
     env:
@@ -125,7 +125,7 @@ jobs:
       - name: "🚀 Upload boot.img"
         uses: actions/upload-artifact@v4
         with:
-          name: boot-KernelSU-thyme
+          name: boot-KernelSU-oxygen
           path: ${{ env.kernelName }}/${{ env.OUT_DIR }}/boot.img
           if-no-files-found: error
           retention-days: 7
