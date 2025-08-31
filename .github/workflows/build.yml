@@ -55,13 +55,14 @@ jobs:
       - name: "😋 Patch KernelSU"
         working-directory: ${{ env.kernelName }}
         run: |
-          curl -LSs "https://raw.githubusercontent.com/tiann/KernelSU/main/kernel/setup.sh" | bash -
-
-          # 针对 ≤5.4 内核补丁
-          curl -LSs "https://raw.githubusercontent.com/tiann/KernelSU/main/.github/patches/5.4/0001-kernel-5.4.patch" | patch -p1
-
-          # 必要配置
+          # 1. 检出 v0.9.5
+          git clone --depth=1 --branch v0.9.5 https://github.com/tiann/KernelSU.git
+          # 2. 官方 setup 会自动打补丁，无需手动 patch
+          export KSU_VERSION=0.9.5
+          curl -LSs "https://raw.githubusercontent.com/tiann/KernelSU/v0.9.5/kernel/setup.sh" | bash -
+          # 3. 打开必要配置
           {
+            echo "CONFIG_KSU=y"
             echo "CONFIG_KPROBES=y"
             echo "CONFIG_HAVE_KPROBES=y"
             echo "CONFIG_KPROBE_EVENTS=y"
