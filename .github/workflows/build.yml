@@ -1,6 +1,7 @@
-name: "Build KernelSU only"
+name: "Build KernelSU for thyme"
 
 env:
+  CONFIGURATION: "repos.json"
   OUT_DIR: "out"
 
 on:
@@ -8,24 +9,22 @@ on:
 
 jobs:
   Build-KernelSU:
-    name: "🐎 Build KernelSU"
+    name: "🐎 DogDay-KernelSU (thyme)"
     runs-on: ubuntu-latest
 
     env:
       kernelName: "DogDay-KernelSU"
-      kernelRepo: "https://github.com/PixelExperience-Devices/kernel_xiaomi_oxygen"
-      kernelBranch: "thirteen"
-      kernelDevice: "oxygen"
-      DEFCONFIG_NAME: "oxygen_defconfig"
+      kernelRepo: "https://codeberg.org/DogDayAndroid/android_kernel_xiaomi_thyme"
+      kernelBranch: "lineage-20.0"
+      kernelDevice: "thyme"
+      DEFCONFIG_NAME: "thyme_defconfig"
       ARCH: "arm64"
-      CROSS_COMPILE: "aarch64-linux-android-"
+      CROSS_COMPILE: "aarch64-linux-gnu-"
+      CROSS_COMPILE_ARM32: "arm-linux-gnueabi-"
       CLANG_TRIPLE: "aarch64-linux-gnu-"
       CC: "clang"
       AR: "llvm-ar"
       LD: "ld.lld"
-      OBJCOPY: "llvm-objcopy"
-      OBJDUMP: "llvm-objdump"
-      READELF: "llvm-readelf"
 
     steps:
       - name: "✨ Checkout"
@@ -35,28 +34,33 @@ jobs:
         run: |
           sudo apt-get update -y
           sudo apt-get install -y \
-            bc bison build-essential ccache curl flex git libssl-dev \
-            libelf-dev libncurses5-dev lz4 liblz4-dev python3 wget unzip \
-            device-tree-compiler zstd libfl-dev
+            bc bison build-essential curl flex git libssl-dev libelf-dev \
+            libncurses5-dev lz4 liblz4-dev python3 wget unzip device-tree-compiler \
+            gcc-aarch64-linux-gnu gcc-arm-linux-gnueabi llvm lld
 
       - name: "🌟 Clone kernel source"
         run: |
           git clone --depth=1 --branch ${{ env.kernelBranch }} ${{ env.kernelRepo }} ${{ env.kernelName }}
 
-      - name: "🛠️ Setup AOSP clang"
+      - name: "🛠️ Clone toolchains"
         run: |
-          git clone --depth=1 https://github.com/kdrag0n/aarch64-linux-android-13-clang prebuilts/clang/host/linux-x86/clang-aosp
-          echo "$(pwd)/prebuilts/clang/host/linux-x86/clang-aosp/bin" >> $GITHUB_PATH
+          git clone --depth=1 https://android.googlesource.com/platform/prebuilts/gas/linux-x86 gas
+          git clone --depth=1 -b 11 https://gitlab.com/ThankYouMario/android_prebuilts_clang-standalone clang
+
+      - name: "🔧 Setup PATH"
+        run: |
+          echo "$(pwd)/gas"          >> $GITHUB_PATH
+          echo "$(pwd)/clang/bin"    >> $GITHUB_PATH
 
       - name: "😋 Patch KernelSU"
         working-directory: ${{ env.kernelName }}
         run: |
           curl -LSs "https://raw.githubusercontent.com/tiann/KernelSU/main/kernel/setup.sh" | bash -
 
-          # 针对 ≤5.4 内核打补丁
+          # 针对 ≤5.4 内核补丁
           curl -LSs "https://raw.githubusercontent.com/tiann/KernelSU/main/.github/patches/5.4/0001-kernel-5.4.patch" | patch -p1
 
-          # 打开必要配置
+          # 必要配置
           {
             echo "CONFIG_KPROBES=y"
             echo "CONFIG_HAVE_KPROBES=y"
@@ -70,96 +74,57 @@ jobs:
         run: |
           make O=${{ env.OUT_DIR }} ${{ env.DEFCONFIG_NAME }} \
             ARCH=${{ env.ARCH }} \
-            CC=clang \
             CROSS_COMPILE=${{ env.CROSS_COMPILE }} \
+            CROSS_COMPILE_ARM32=${{ env.CROSS_COMPILE_ARM32 }} \
             CLANG_TRIPLE=${{ env.CLANG_TRIPLE }} \
-            AR=llvm-ar \
-            LD=ld.lld \
-            OBJCOPY=llvm-objcopy
+            CC=${{ env.CC }} \
+            AR=${{ env.AR }} \
+            LD=${{ env.LD }}
 
       - name: "🎶 Build kernel"
         working-directory: ${{ env.kernelName }}
         run: |
           make O=${{ env.OUT_DIR }} -j$(nproc) \
             ARCH=${{ env.ARCH }} \
-            CC=clang \
             CROSS_COMPILE=${{ env.CROSS_COMPILE }} \
+            CROSS_COMPILE_ARM32=${{ env.CROSS_COMPILE_ARM32 }} \
             CLANG_TRIPLE=${{ env.CLANG_TRIPLE }} \
-            AR=llvm-ar \
-            LD=ld.lld \
-            OBJCOPY=llvm-objcopy
+            CC=${{ env.CC }} \
+            AR=${{ env.AR }} \
+            LD=${{ env.LD }}
 
-      - name: "💛 Upload Image"
-        uses: actions/upload-artifact@v4
-        with:
-          name: Image-KernelSU-${{ env.kernelDevice }}
-          path: ${{ env.OUT_DIR }}/arch/${{ env.ARCH }}/boot/Image
-          if-no-files-found: error
-          retention-days: 7
-
-      - name: "💙 Upload Image.gz"
-        uses: actions/upload-artifact@v4
-        with:
-          name: Image.gz-KernelSU-${{ env.kernelDevice }}
-          path: ${{ env.OUT_DIR }}/arch/${{ env.ARCH }}/boot/Image.gz
-          if-no-files-found: ignore
-          retention-days: 7
-
-      - name: "💜 Upload dtb"
-        uses: actions/upload-artifact@v4
-        with:
-          name: dtb-KernelSU-${{ env.kernelDevice }}
-          path: ${{ env.OUT_DIR }}/arch/${{ env.ARCH }}/boot/dtb
-          if-no-files-found: ignore
-          retention-days: 7
-
-      - name: "❤️ Upload dtbo.img"
-        uses: actions/upload-artifact@v4
-        with:
-          name: dtbo-KernelSU-${{ env.kernelDevice }}
-          path: ${{ env.OUT_DIR }}/arch/${{ env.ARCH }}/boot/dtbo.img
-          if-no-files-found: ignore
-          retention-days: 7
-
-      # --------------------------------------------------
-      # ① 下载 Android mkbootimg 工具
       - name: "📦 Install mkbootimg"
         run: |
           sudo apt-get update
           sudo apt-get install -y android-tools-mkbootimg
 
-      # ② 把 Image 与 dtb 打包成 boot.img
       - name: "🔗 Make boot.img"
         working-directory: ${{ env.kernelName }}
         run: |
-          # 如果 dtb 是目录，先合成 dtb.img
+          # 合成 dtb.img（目录 -> 合并）
           if [ -d ${{ env.OUT_DIR }}/arch/${{ env.ARCH }}/boot/dtb ]; then
-            find ${{ env.OUT_DIR }}/arch/${{ env.ARCH }}/boot/dtb -type f -name "*.dtb" \
-              | sort | xargs cat > ${{ env.OUT_DIR }}/dtb.img
-            DTB_FILE="${{ env.OUT_DIR }}/dtb.img"
+            find ${{ env.OUT_DIR }}/arch/${{ env.ARCH }}/boot/dtb -type f -name "*.dtb" | sort | xargs cat > ${{ env.OUT_DIR }}/dtb.img
+            DTB_ARG="--dtb ${{ env.OUT_DIR }}/dtb.img"
           else
-            DTB_FILE="${{ env.OUT_DIR }}/arch/${{ env.ARCH }}/boot/dtb"
+            DTB_ARG=""
           fi
 
-          # 使用原厂参数
+          # 使用官方 mkbootimg 打包
           mkbootimg \
             --kernel ${{ env.OUT_DIR }}/arch/${{ env.ARCH }}/boot/Image \
-            --dtb  "$DTB_FILE" \
-            --cmdline "androidboot.hardware=qcom msm_rtb.filter=0x237 ehci-hcd.park=3 lpm_levels.sleep_disabled=1 androidboot.bootdevice=7824900.sdhci earlycon=msm_hsl_uart,0x78af000 loop.max_part=16 androidboot.usbconfigfs=true androidboot.boot_devices=soc/7824900.sdhci buildvariant=userdebug" \
-            --base        0x80000000 \
-            --kernel_offset  0x00008000 \
+            ${DTB_ARG} \
+            --cmdline "" \
+            --base 0x00000000 \
+            --kernel_offset 0x00080000 \
             --ramdisk_offset 0x01000000 \
-            --tags_offset    0x00000100 \
-            --pagesize    2048 \
-            --os_version  13.0.0 \
-            --os_patch_level 2024-05 \
+            --tags_offset 0x00000100 \
+            --pagesize 4096 \
             -o ${{ env.OUT_DIR }}/boot.img
 
-      # ③ 把 boot.img 当 artifact 上传
       - name: "🚀 Upload boot.img"
         uses: actions/upload-artifact@v4
         with:
-          name: boot-KernelSU-${{ env.kernelDevice }}
+          name: boot-KernelSU-thyme
           path: ${{ env.kernelName }}/${{ env.OUT_DIR }}/boot.img
           if-no-files-found: error
           retention-days: 7
