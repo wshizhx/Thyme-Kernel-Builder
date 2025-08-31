@@ -97,7 +97,7 @@ jobs:
       - name: "📦 Install mkbootimg"
         run: |
           sudo apt-get update
-          sudo apt-get install -y android-tools-mkbootimg
+          sudo apt-get -y install android-tools
 
       - name: "🔗 Make boot.img"
         working-directory: ${{ env.kernelName }}
