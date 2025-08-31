@@ -94,32 +94,35 @@ jobs:
             AR=${{ env.AR }} \
             LD=${{ env.LD }}
 
-      - name: "📦 Install mkbootimg"
+      - name: "📦 获取 mkbootimg_tools（xiaolu 版，开箱即用）"
         run: |
-          sudo apt-get update
-          sudo apt-get -y install android-tools
+          git clone --depth=1 https://github.com/xiaolu/mkbootimg_tools.git
+          # 把脚本目录加到 PATH
+          echo "$(pwd)/mkbootimg_tools" >> $GITHUB_PATH
+          chmod +x mkbootimg_tools/*
 
-      - name: "🔗 Make boot.img"
+      - name: "🔗 打包 boot.img"
         working-directory: ${{ env.kernelName }}
         run: |
-          # 合成 dtb.img（目录 -> 合并）
+          # 如果 dtb 是目录，先合并成 dtb.img
           if [ -d ${{ env.OUT_DIR }}/arch/${{ env.ARCH }}/boot/dtb ]; then
-            find ${{ env.OUT_DIR }}/arch/${{ env.ARCH }}/boot/dtb -type f -name "*.dtb" | sort | xargs cat > ${{ env.OUT_DIR }}/dtb.img
-            DTB_ARG="--dtb ${{ env.OUT_DIR }}/dtb.img"
+            find ${{ env.OUT_DIR }}/arch/${{ env.ARCH }}/boot/dtb -type f -name "*.dtb" \
+              | sort | xargs cat > ${{ env.OUT_DIR }}/dtb.img
+            DTB_ARG="--dt ${{ env.OUT_DIR }}/dtb.img"
           else
             DTB_ARG=""
           fi
 
-          # 使用官方 mkbootimg 打包
-          mkbootimg \
+          # 使用 xiaolu 的 mkbootimg 打包
+          mkbootimg_tools/mkbootimg \
             --kernel ${{ env.OUT_DIR }}/arch/${{ env.ARCH }}/boot/Image \
             ${DTB_ARG} \
-            --cmdline "" \
-            --base 0x00000000 \
-            --kernel_offset 0x00080000 \
+            --cmdline "androidboot.hardware=qcom msm_rtb.filter=0x237 ehci-hcd.park=3 lpm_levels.sleep_disabled=1 androidboot.bootdevice=7824900.sdhci earlycon=msm_hsl_uart,0x78af000 loop.max_part=16 androidboot.usbconfigfs=true androidboot.boot_devices=soc/7824900.sdhci buildvariant=userdebug" \
+            --base 0x80000000 \
+            --kernel_offset 0x00008000 \
             --ramdisk_offset 0x01000000 \
             --tags_offset 0x00000100 \
-            --pagesize 4096 \
+            --pagesize 2048 \
             -o ${{ env.OUT_DIR }}/boot.img
 
       - name: "🚀 Upload boot.img"
